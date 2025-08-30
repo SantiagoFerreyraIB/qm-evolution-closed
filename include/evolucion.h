@@ -1,11 +1,10 @@
-// Santiago Ferreyra -- Agosto 2025
+// Santiago Ferreyra -- September 2025
 // This library defines the Qubit class, which lets define and solve a time dependent quantum mechanics problem with Hamiltonian of the form H(t)=H0+V*f(t),
 // where V is an arbitrary hermitian matrix, and f(t) is a protocol defined from 0 to T. It is optimized for when we are not interested in intermediate steps, just the final time T.
 // H0 and f(t) is allowed to depend in a set of parameters which can be set via a setter function.
 // The problem is described in a basis where V is diagonal w/o loss of generality.
 
-#define NK 1000 // Discretization of time period
-#define TAU 6.283185307179586 //=2pi
+#define NK 100 // Discretization of time period
 
 //Libraries
 #include <cstdlib>
@@ -34,7 +33,7 @@ class Qubit {
     int dim, npar; //dim: Hamiltonian dimension, npar: number of H0 parameters
     cx_mat (*H0_func)(Qubit* ,double*); //gives H0 from par
     vec V; //driving operator
-    std::function<double(double)> f;  //driving function (from 0 to T)
+    std::function<double(double)> f;  //driving function f(t)
 
     // Hamiltonian parameters
     double *par;   // vector of H0 parameters
@@ -82,17 +81,16 @@ class Qubit {
 
 // Class functions
 
-void Qubit::calcH0(){ //calculates and diagonalizes H0 with setted params
+void Qubit::calcH0(){ //Constructs H0 and calculates its eigensystem with setted params
     H0 = H0_func(this, par);
-    eig_sym(energy,eigst,symmatu(H0));//symmatu is to avoid non-hermiticity caused by rounding errors.
-    //energy.print("energias: ");
+    eig_sym(energy,eigst,symmatu(H0)); //Symmatu is to avoid non-hermiticity caused by rounding errors.
 }
 
-void Qubit::calcTimeEvolution() {
+void Qubit::calcTimeEvolution() { //Calculates time evolution operator at time T
     #define s (1./(4.-pow(4.,1./3.)))
     #define z (1-4*s)
 
-    int i, j, k, it;
+    int i, it;
     double t;
     double dt = T/NK;
 
@@ -130,24 +128,23 @@ void Qubit::calcTimeEvolution() {
             uh2_+=exp(-CI*energy[i]*dt*z)*tensorprod;
         }
 
-        // 4th-order Trotter-Susuki
+        // 4th-order Trotter-Susuki step
         U_T = uv6_*uh1_*uv5_*uh1_*uv4_*uh2_*uv3_*uh1_*uv2_*uh1_*uv1_*U_T;
     }
 }
 
-cx_vec Qubit::propagate(cx_vec psi_i){
+cx_vec Qubit::propagate(cx_vec psi_i){ // psi(t) = U(t)*psi(0)
     cx_vec psi_f(dim,fill::zeros);
     psi_f = U_T * psi_i;
     return normalise(psi_f);
 }
 
-double Qubit::transProb(cx_vec psi_i, cx_vec psi_f) {
-    cx_vec psi_T = propagate(psi_i); // Evoluciona el estado inicial
-    return norm(cdot(psi_f, psi_T)); // Probabilidad = |<psi_f|psi_T>|^2
+double Qubit::transProb(cx_vec psi_i, cx_vec psi_f) { // Transition probability P(i->f) = |<psi_f|U_T|psi_i>|^2
+    cx_vec psi_T = propagate(psi_i);
+    return norm(cdot(psi_f, psi_T));
 }
 
-double Qubit::fidelidad(cx_mat U_tg){ //calculates fidelity (d=2) between the target unitary and the time evolution operator at T
-    // Calculo U00, U01, U10, U11
+double Qubit::fidelidad(cx_mat U_tg) { // Fidelity (d=2) between a target unitary and U_T
     cx_mat U(2,2);
 
     cx_vec psi0 = eigst.col(0);
@@ -155,16 +152,14 @@ double Qubit::fidelidad(cx_mat U_tg){ //calculates fidelity (d=2) between the ta
 
     cx_vec psi0_f = propagate(psi0);
     cx_vec psi1_f = propagate(psi1);
-    U(0,0) = cdot(psi0, psi0_f);
-    U(0,1) = cdot(psi1, psi0_f);
-    U(1,0) = cdot(psi0, psi1_f);
-    U(1,1) = cdot(psi1, psi1_f);
+
+    U(0,0) = cdot(psi0, psi0_f); U(0,1) = cdot(psi1, psi0_f);
+    U(1,0) = cdot(psi0, psi1_f); U(1,1) = cdot(psi1, psi1_f);
 
     // F = 1/6 * (Tr(U^dagger * U) + | Tr(U_tg^dagger * U) | ^2)
 
-    double fid = 0;
-    fid += real(arma::trace(U.t() * U));
-    fid += abs(arma::trace(U_tg.t() * U)) * abs(arma::trace(U_tg.t() * U));
+    double u = real(trace(U.t() * U));
+    double v = abs(trace(U_tg.t() * U));
 
-    return fid/6.0;
+    return (u + v*v)/6.0;
 }
