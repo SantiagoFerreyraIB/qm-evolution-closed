@@ -17,7 +17,7 @@
 using namespace std;
 using namespace arma;
 
-//Pauli Matrices
+// Pauli Matrices
 #ifndef PAULI_SIGMA_MATRICES
 #define PAULI_SIGMA_MATRICES
 const cx_mat ID = {{C1,C0},{C0,C1}};
@@ -29,7 +29,7 @@ const cx_mat SZ = {{C1,C0},{C0,-C1}};
 // Target
 cx_mat Utg = SX;
 
-//Hamiltonian and driving definitions
+// Hamiltonian and driving definitions
 
 #define DIM 2 // Dimension del subespacio truncado
 #define H0_PARS 1 // Parametros de H0 que podrían iterarse
