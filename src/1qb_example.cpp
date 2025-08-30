@@ -5,8 +5,8 @@
 #include <armadillo>
 #include <math.h>
 #include <functional>
-#include "./headers/evolucion.h"
-#include "./headers/multivar.h"
+#include "../include/evolucion.h"
+#include "../include/multivar.h"
 
 #define H_FUNC std::function<double(Qubit*, double*)>
 
