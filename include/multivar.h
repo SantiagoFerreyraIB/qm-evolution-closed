@@ -1,15 +1,15 @@
-//Sebastian Gallardo --- Septiembre 2020
-//This header defines the classes mv_domain, and mv_iterator.
-//mv_domain represents a cartesian product of evenly spaced points (an orthogonal lattice) in VAR^nVar space (the spacing can be different for different variables).
-//mv_iterator includes the function go() which performs the calculation of of chosen member functions in funcList for all points in the mv_iterator's mv_domain and saves the data to an ofstream.
-//mv_iterator's constructor asks the user for input via console.
-//I use this header to analyze N-dimensional functions.
+//  Santiago Ferreyra (followed from Sebastian Gallardo) --- Septiembre 2025
+//  This header defines the classes mv_domain, and mv_iterator.
+//  mv_domain represents a cartesian product of evenly spaced points (an orthogonal lattice) in VAR^nVar space (the spacing can be different for different variables).
+//  mv_iterator includes the function go() which performs the calculation of chosen member functions in funcList for all points in the mv_iterator's mv_domain and saves the data to an ofstream.
+//  mv_iterator's constructor asks the user for input via console.
+//  This header is used to analyze N-dimensional functions.
 
 //Libraries
 #include <iostream>
 #include <fstream>
 #include <functional>
-#include <iomanip>  // Add this line for setprecision
+#include <iomanip>  // Add this line to set higher precission
 
 #define OBJVAR_FUNC function<VAR(OBJECT*,VAR[])>
 #define FILENAME_BUFFER_SIZE 256
@@ -18,15 +18,15 @@ using namespace std;
 
 //Class definitions
 template <class VAR> struct mv_domain{
-    int nVar; //Number of variables (dimension) of the mv_domain
-    int nIter; //how many variables to iterate over
+    int nVar; //number of variables (dimension) of the mv_domain
+    int nIter; //number of variables to iterate over
     int *iterVar; //indexes of the variables to iterate over
     VAR *minIter; //starting values for variables to iterate
     VAR *maxIter; //ending values for variables to iterate
     VAR *stepIter; //step values for variables to iterate
     VAR *fixedValue; //starting value for fixed variables, in order least-greatest
-    const string *varNames; //names of the variables in question 
-    const string *funcNames; // names of the functions
+    const string *varNames; //names of the variables
+    const string *funcNames; //names of the functions
     mv_domain(){};
     ~mv_domain();
     int readFromUserInput();

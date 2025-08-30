@@ -1,18 +1,18 @@
 #include <iostream>
 #include <fstream>
 #include <complex>
-#define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 #include <math.h>
 #include <functional>
 #include "../include/evolucion.h"
 #include "../include/multivar.h"
 
-#define H_FUNC std::function<double(Qubit*, double*)>
+#define H_FUNC function<double(Qubit*, double*)>
 
 #define C1 (cx_double){1,0}
 #define CI (cx_double){0,1}
 #define C0 (cx_double){0,0}
+#define Csqrt2 (cx_double){1/sqrt(2),0}
 
 using namespace std;
 using namespace arma;
@@ -24,51 +24,42 @@ const cx_mat ID = {{C1,C0},{C0,C1}};
 const cx_mat SX = {{C0,C1},{C1,C0}};
 const cx_mat SY = {{C0,-CI},{CI,C0}};
 const cx_mat SZ = {{C1,C0},{C0,-C1}};
+const cx_mat Ypi2 = {{Csqrt2,-Csqrt2},{Csqrt2,Csqrt2}};
 #endif
 
-// Target
-cx_mat Utg = SX;
+cx_mat Utg = Ypi2; // Target unitary (for Fidelity example)
 
 // Hamiltonian and driving definitions
 
-#define DIM 2 // Dimension del subespacio truncado
-#define H0_PARS 1 // Parametros de H0 que podrían iterarse
+#define DIM 2 // Dimension of the quantum system
+#define H0_PARS 1 // Parameters of H0 that could be iterated
 
-// H0 pars
-double w_q;
-// Driving pars
-double A, w;
+
+double w_q; // H0 pars
+double A, w; // Driving pars
 
 cx_mat H0(Qubit *Q, double *par){
-	w_q = par[0]; // Frecuencia del qubit 
+	w_q = par[0]; // Qubit frequency
+    Q->wq = w_q;
 
-    // Definition of H0 in some initial basis
+    // Definition of H0 and V in some initial basis
     cx_mat H0 = - .5 *w_q * SZ;
-
-    // Definition of driving operator
-    cx_mat driveOp = SX;
-
-	vec H0_eigvals(DIM); cx_mat H0_eigvecs(DIM, DIM);
-	eig_sym(H0_eigvals, H0_eigvecs, symmatu(H0));
-
-	double wq = H0_eigvals(1) - H0_eigvals(0);
-	cout << "wq = " << wq << endl;
-    Q->wq = wq;
-
+    cx_mat V = SX;
+    
 	vec driving_evals(DIM); cx_mat driving_evecs(DIM, DIM);
-	eig_sym(driving_evals, driving_evecs, symmatu(driveOp));
+	eig_sym(driving_evals, driving_evecs, symmatu(V));
+	Q->V = driving_evals; // Set driving (in diagonal basis)
 
-    // Return H0 in the basis where driveOp is diagonal
-	return driving_evecs.t() * H0 * driving_evecs;
+	return driving_evecs.t() * H0 * driving_evecs; // Return H0 in the basis where V is diagonal
 }
 
 // DRIVING FUNCTION f_drive(params, t)
 std::function<double(double)> f_drive(
-    double A, // driving amplitude
-    double w // driving frequency
+    double A_, // driving amplitude
+    double w_ // driving frequency
 ) {
     auto f = [=](double t) {
-        return - .5 * A * sin(w * t);
+        return - .5 * A_ * sin(w_ * t);
     };
 
     return f;
@@ -76,6 +67,9 @@ std::function<double(double)> f_drive(
 
 // Setter function (after main)
 void setPars(Qubit *Q, double *x);
+
+// Name of destination folder
+string folderName = "../examples/";
 
 int main() {
 
@@ -91,9 +85,6 @@ int main() {
 
 	string varNames[] = {"w_q", "A/w_q", "w/w_q"};
 	string funcNames[] = {"P01_T", "Fidelidad"};
-	
-	// Name of destination folder
-	string folderName = "./";
 
     // Here I initialize functions from <functional> with lambdas.
     // The functions take the Qubit class and a set of parameters given by the user.
@@ -118,7 +109,7 @@ int main() {
     };
     cout << "f1: Fidelidad\n";
 
-    mv_iterator<Qubit,double> iter(single_qubit, H0_PARS, funcList, NFUNCS, varNames, funcNames, folderName);
+    mv_iterator<Qubit,double> iter(single_qubit, H0_PARS+2, funcList, NFUNCS, varNames, funcNames, folderName);
     iter.go();
 
 }
@@ -142,10 +133,10 @@ void setPars(Qubit *Q, double *x){
 	}
 
     // Update driving vars
-    if(A!=(x[npar+1]*Q->wq) || w!=(x[npar+2]*Q->wq)){
+    if(A!=(x[npar]*Q->wq) || w!=(x[npar+1]*Q->wq)){
         V_changed = true;
-        A = x[npar+1]*Q->wq;
-        w = x[npar+2]*Q->wq;
+        A = x[npar]*Q->wq;
+        w = x[npar+1]*Q->wq;
 
         Q->f = f_drive(A, w);
         Q->T = 2*M_PI/w;

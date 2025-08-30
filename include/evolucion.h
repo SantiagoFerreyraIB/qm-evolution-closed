@@ -4,7 +4,7 @@
 // H0 and f(t) is allowed to depend in a set of parameters which can be set via a setter function.
 // The problem is described in a basis where V is diagonal w/o loss of generality.
 
-#define NK 100 // Discretization of time period
+#define NK 20 // Discretization of time period
 
 //Libraries
 #include <cstdlib>
@@ -18,15 +18,6 @@
 
 using namespace std;
 using namespace arma;
-
-//Pauli Matrices
-#ifndef PAULI_SIGMA_MATRICES
-#define PAULI_SIGMA_MATRICES
-const cx_mat ID = {{C1,C0},{C0,C1}};
-const cx_mat SX = {{C0,C1},{C1,C0}};
-const cx_mat SY = {{C0,-CI},{CI,C0}};
-const cx_mat SZ = {{C1,C0},{C0,-C1}};
-#endif
 
 class Qubit {
     public:
@@ -97,7 +88,7 @@ void Qubit::calcTimeEvolution() { //Calculates time evolution operator at time T
     // Identity at first step
     U_T = cx_mat(dim, dim, fill::eye);
 
-    for(it=0; it<NK; it++){
+   for(it=0; it<NK; it++){
         //cout << "t = " << it*dt << endl;
         //cout << "f(t) = " << f(it*dt) << endl;
         double v1=f((it*dt+s*dt/2));
@@ -128,7 +119,7 @@ void Qubit::calcTimeEvolution() { //Calculates time evolution operator at time T
             uh2_+=exp(-CI*energy[i]*dt*z)*tensorprod;
         }
 
-        // 4th-order Trotter-Susuki step
+        // 4th-order Trotter-Susuki
         U_T = uv6_*uh1_*uv5_*uh1_*uv4_*uh2_*uv3_*uh1_*uv2_*uh1_*uv1_*U_T;
     }
 }
@@ -159,7 +150,7 @@ double Qubit::fidelidad(cx_mat U_tg) { // Fidelity (d=2) between a target unitar
     // F = 1/6 * (Tr(U^dagger * U) + | Tr(U_tg^dagger * U) | ^2)
 
     double u = real(trace(U.t() * U));
-    double v = abs(trace(U_tg.t() * U));
+    double v = norm(trace(U_tg.t() * U));
 
-    return (u + v*v)/6.0;
+    return ((u + v)/6.0);
 }
